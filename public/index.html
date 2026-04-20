@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Registre des emprunts</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f5f4f0;
+      --surface: #ffffff;
+      --surface2: #f0ede8;
+      --border: #e0ddd8;
+      --text: #1a1917;
+      --text2: #6b6860;
+      --text3: #a0998f;
+      --accent: #1a1917;
+      --accent-fg: #ffffff;
+      --danger: #c0392b;
+      --info-bg: #e8f0fe;
+      --info-fg: #1a56db;
+      --radius: 10px;
+      --radius-lg: 14px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1a1917;
+        --surface: #242320;
+        --surface2: #2e2c29;
+        --border: #3a3834;
+        --text: #f0ede8;
+        --text2: #a09890;
+        --text3: #6b6860;
+        --accent: #f0ede8;
+        --accent-fg: #1a1917;
+        --info-bg: #1e2d4a;
+        --info-fg: #7eaaff;
+      }
+    }
+
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    .container { max-width: 780px; margin: 0 auto; padding: 2rem 1.25rem; }
+
+    h1 { font-size: 24px; font-weight: 600; margin-bottom: 4px; }
+    .subtitle { font-size: 14px; color: var(--text2); margin-bottom: 2rem; }
+
+    .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 2rem; }
+    .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+    .stat-label { font-size: 12px; color: var(--text2); margin-bottom: 4px; }
+    .stat-value { font-size: 24px; font-weight: 600; }
+
+    .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; margin-bottom: 2rem; }
+    .form-title { font-size: 13px; font-weight: 500; color: var(--text2); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr 90px; gap: 10px; margin-bottom: 10px; }
+    .form-row2 { display: grid; grid-template-columns: 1fr 130px; gap: 10px; }
+    .field label { font-size: 12px; color: var(--text2); display: block; margin-bottom: 5px; }
+    input[type=text], input[type=number] {
+      width: 100%; padding: 9px 12px;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      background: var(--surface2); color: var(--text);
+      font-size: 14px; font-family: inherit;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    input[type=text]:focus, input[type=number]:focus {
+      outline: none; border-color: var(--text3); background: var(--surface);
+    }
+    .btn-add {
+      width: 100%; padding: 9px 14px; border-radius: var(--radius);
+      background: var(--accent); color: var(--accent-fg);
+      border: none; cursor: pointer; font-size: 14px; font-weight: 500;
+      font-family: inherit; transition: opacity 0.15s;
+    }
+    .btn-add:hover { opacity: 0.82; }
+    .btn-add:disabled { opacity: 0.4; cursor: not-allowed; }
+    .error { font-size: 12px; color: var(--danger); margin-top: 8px; display: none; }
+
+    .controls { display: flex; align-items: center; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; }
+    .controls-label { font-size: 13px; color: var(--text2); white-space: nowrap; }
+    .sort-btn {
+      padding: 5px 13px; border-radius: 20px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text2); font-size: 13px; cursor: pointer;
+      font-family: inherit; transition: all 0.15s;
+    }
+    .sort-btn.active { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+    .sort-btn:not(.active):hover { border-color: var(--text3); color: var(--text); }
+    .dir-btn {
+      padding: 5px 10px; border-radius: 20px; border: 1px solid var(--border);
+      background: transparent; color: var(--text2); font-size: 14px;
+      cursor: pointer; font-family: inherit; transition: all 0.15s;
+    }
+    .dir-btn:hover { border-color: var(--text3); color: var(--text); }
+    .search-wrap { flex: 1; min-width: 140px; }
+    .search-input {
+      width: 100%; padding: 6px 12px; border: 1px solid var(--border);
+      border-radius: 20px; background: var(--surface2);
+      color: var(--text); font-size: 13px; font-family: inherit;
+    }
+    .search-input:focus { outline: none; border-color: var(--text3); }
+
+    .list { display: flex; flex-direction: column; gap: 10px; }
+
+    .person-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+      animation: fadeIn 0.2s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
+    .person-header { display: flex; align-items: center; gap: 12px; padding: 13px 16px; border-bottom: 1px solid var(--border); }
+    .avatar {
+      width: 38px; height: 38px; border-radius: 50%;
+      background: var(--info-bg); display: flex; align-items: center;
+      justify-content: center; font-size: 13px; font-weight: 600;
+      color: var(--info-fg); flex-shrink: 0;
+    }
+    .person-name { font-weight: 600; font-size: 15px; flex: 1; }
+    .badge {
+      background: var(--surface2); border-radius: 20px;
+      font-size: 12px; color: var(--text2); padding: 2px 9px;
+    }
+    .person-date { font-size: 12px; color: var(--text3); }
+
+    .items-list { padding: 0 16px; }
+    .item-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 0; border-bottom: 1px solid var(--border);
+    }
+    .item-row:last-child { border-bottom: none; }
+    .item-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+    .item-name { font-size: 14px; flex: 1; }
+    .item-qty {
+      font-size: 12px; font-weight: 500; background: var(--surface2);
+      border-radius: 4px; padding: 2px 8px; color: var(--text2);
+    }
+    .item-time { font-size: 12px; color: var(--text3); white-space: nowrap; }
+    .del-btn {
+      background: none; border: 1px solid transparent; cursor: pointer;
+      padding: 4px 8px; color: var(--text3); border-radius: 6px;
+      font-size: 12px; font-family: inherit; transition: all 0.15s; flex-shrink: 0;
+    }
+    .del-btn:hover { color: var(--danger); border-color: var(--danger); background: #fff0ee; }
+
+    .empty { text-align: center; padding: 3rem 1rem; color: var(--text2); font-size: 14px; line-height: 1.8; }
+
+    .toast {
+      position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: var(--accent); color: var(--accent-fg); padding: 10px 18px;
+      border-radius: 20px; font-size: 13px; opacity: 0;
+      transition: opacity 0.2s, transform 0.2s; pointer-events: none; z-index: 999;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    .loading { text-align: center; padding: 2rem; color: var(--text3); font-size: 14px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Registre des emprunts</h1>
+  <p class="subtitle">Suivi du matériel emprunté</p>
+
+  <div class="stats-row">
+    <div class="stat"><div class="stat-label">Emprunts actifs</div><div class="stat-value" id="stat-total">—</div></div>
+    <div class="stat"><div class="stat-label">Emprunteurs</div><div class="stat-value" id="stat-persons">—</div></div>
+    <div class="stat"><div class="stat-label">Articles en prêt</div><div class="stat-value" id="stat-qty">—</div></div>
+  </div>
+
+  <div class="form-card">
+    <div class="form-title">Nouvel emprunt</div>
+    <div class="form-row">
+      <div class="field"><label>Prénom</label><input type="text" id="inp-prenom" placeholder="ex. Marie" /></div>
+      <div class="field"><label>Nom</label><input type="text" id="inp-nom" placeholder="ex. Dupont" /></div>
+      <div class="field"><label>Quantité</label><input type="number" id="inp-qty" value="1" min="1" /></div>
+    </div>
+    <div class="form-row2">
+      <div class="field"><label>Matériel emprunté</label><input type="text" id="inp-item" placeholder="ex. Perceuse Bosch" /></div>
+      <button class="btn-add" id="btn-submit" onclick="addEmprunt()">+ Enregistrer</button>
+    </div>
+    <div class="error" id="err-msg">Veuillez remplir tous les champs.</div>
+  </div>
+
+  <div class="controls">
+    <span class="controls-label">Trier par</span>
+    <button class="sort-btn active" id="btn-date" onclick="setSort('date')">Date</button>
+    <button class="sort-btn" id="btn-nom" onclick="setSort('nom')">Nom</button>
+    <button class="sort-btn" id="btn-prenom" onclick="setSort('prenom')">Prénom</button>
+    <div class="search-wrap"><input class="search-input" id="search" placeholder="Rechercher..." oninput="render()" /></div>
+    <button class="dir-btn" id="dir-btn" onclick="toggleDir()">↓</button>
+  </div>
+
+  <div class="list" id="list"><div class="loading">Chargement…</div></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let emprunts = [];
+let sortMode = 'date';
+let sortDir = -1;
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+async function fetchEmprunts() {
+  const res = await fetch('/api/emprunts');
+  emprunts = await res.json();
+  render();
+}
+
+async function addEmprunt() {
+  const prenom = document.getElementById('inp-prenom').value.trim();
+  const nom = document.getElementById('inp-nom').value.trim();
+  const item = document.getElementById('inp-item').value.trim();
+  const qty = parseInt(document.getElementById('inp-qty').value) || 1;
+  const err = document.getElementById('err-msg');
+  const btn = document.getElementById('btn-submit');
+
+  if (!prenom || !nom || !item) { err.style.display = 'block'; return; }
+  err.style.display = 'none';
+  btn.disabled = true;
+
+  const res = await fetch('/api/emprunts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prenom, nom, item, qty })
+  });
+
+  if (res.ok) {
+    const e = await res.json();
+    emprunts.unshift(e);
+    document.getElementById('inp-prenom').value = '';
+    document.getElementById('inp-nom').value = '';
+    document.getElementById('inp-item').value = '';
+    document.getElementById('inp-qty').value = '1';
+    showToast('Emprunt enregistré ✓');
+    render();
+  }
+  btn.disabled = false;
+}
+
+async function delEmprunt(id) {
+  const res = await fetch('/api/emprunts/' + id, { method: 'DELETE' });
+  if (res.ok) {
+    emprunts = emprunts.filter(e => e.id !== id);
+    showToast('Emprunt supprimé');
+    render();
+  }
+}
+
+function setSort(mode) {
+  if (sortMode === mode) { sortDir *= -1; }
+  else { sortMode = mode; sortDir = mode === 'date' ? -1 : 1; }
+  ['date','nom','prenom'].forEach(m => document.getElementById('btn-'+m).classList.toggle('active', m === sortMode));
+  render();
+}
+function toggleDir() { sortDir *= -1; render(); }
+
+function personKey(e) { return (e.prenom + ' ' + e.nom).toLowerCase(); }
+function initials(p, n) { return ((p[0]||'') + (n[0]||'')).toUpperCase(); }
+
+function timeAgo(ts) {
+  const m = Math.floor((Date.now() - new Date(ts)) / 60000);
+  if (m < 1) return "à l'instant";
+  if (m < 60) return `il y a ${m} min`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `il y a ${h}h`;
+  const d = Math.floor(h / 24);
+  return d === 1 ? 'hier' : `il y a ${d} j`;
+}
+function formatDate(ts) {
+  return new Date(ts).toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric' });
+}
+
+function groupByPerson(list) {
+  const map = new Map();
+  list.forEach(e => {
+    const k = personKey(e);
+    if (!map.has(k)) map.set(k, { prenom: e.prenom, nom: e.nom, items: [] });
+    map.get(k).items.push(e);
+  });
+  return Array.from(map.values());
+}
+
+function sortGroups(groups) {
+  return [...groups].sort((a, b) => {
+    let va, vb;
+    if (sortMode === 'date') {
+      va = Math.max(...a.items.map(i => new Date(i.created_at)));
+      vb = Math.max(...b.items.map(i => new Date(i.created_at)));
+    } else if (sortMode === 'nom') {
+      va = a.nom.toLowerCase(); vb = b.nom.toLowerCase();
+    } else {
+      va = a.prenom.toLowerCase(); vb = b.prenom.toLowerCase();
+    }
+    return va < vb ? -1 * sortDir : va > vb ? 1 * sortDir : 0;
+  });
+}
+
+function render() {
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  let filtered = emprunts;
+  if (q) filtered = emprunts.filter(e =>
+    e.prenom.toLowerCase().includes(q) || e.nom.toLowerCase().includes(q) || e.item.toLowerCase().includes(q)
+  );
+
+  document.getElementById('stat-total').textContent = emprunts.length;
+  document.getElementById('stat-persons').textContent = new Set(emprunts.map(e => personKey(e))).size;
+  document.getElementById('stat-qty').textContent = emprunts.reduce((s, e) => s + e.qty, 0);
+  document.getElementById('dir-btn').textContent = sortDir === 1 ? '↑' : '↓';
+
+  const groups = sortGroups(groupByPerson(filtered));
+  const list = document.getElementById('list');
+
+  if (!groups.length) {
+    list.innerHTML = '<div class="empty">' + (q ? 'Aucun résultat.' : 'Aucun emprunt enregistré.<br>Ajoutez le premier ci-dessus.') + '</div>';
+    return;
+  }
+
+  list.innerHTML = groups.map(g => {
+    const latestTs = g.items.reduce((max, i) => new Date(i.created_at) > new Date(max) ? i.created_at : max, g.items[0].created_at);
+    const sorted = [...g.items].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    return `
+      <div class="person-card">
+        <div class="person-header">
+          <div class="avatar">${initials(g.prenom, g.nom)}</div>
+          <div class="person-name">${g.prenom} ${g.nom}</div>
+          ${g.items.length > 1 ? `<span class="badge">${g.items.length} emprunts</span>` : ''}
+          <div class="person-date">${formatDate(latestTs)}</div>
+        </div>
+        <div class="items-list">
+          ${sorted.map(e => `
+            <div class="item-row">
+              <div class="item-dot"></div>
+              <div class="item-name">${e.item}</div>
+              <div class="item-qty">x${e.qty}</div>
+              <div class="item-time">${timeAgo(e.created_at)}</div>
+              <button class="del-btn" onclick="delEmprunt(${e.id})">Rendu ✓</button>
+            </div>
+          `).join('')}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+document.getElementById('inp-prenom').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('inp-nom').focus(); });
+document.getElementById('inp-nom').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('inp-item').focus(); });
+document.getElementById('inp-item').addEventListener('keydown', e => { if (e.key === 'Enter') addEmprunt(); });
+
+fetchEmprunts();
+</script>
+</body>
+</html>
